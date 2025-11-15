@@ -7,39 +7,51 @@ import kotlin.math.min
 import kotlin.random.Random
 
 /**
- * Arbitrary-precision signed integers for Kotlin multi-platform, providing
- * a replacement for [java.math.BigInteger].
+ * Arbitrary-precision signed integers for Kotlin Multiplatform, serving as a
+ * lightweight replacement for [java.math.BigInteger].
  *
- * Provides basic arithmetic operations `+ - * / %` plus comparator operators
- * `< <= == != >= >` thru kotlin operator overloading. Also provides overloaded
- * operator functions where the
- * other operand is a primitive integer type, thereby allowing standard expression
- * syntax for arithmetic and comparator expressions involving a mixture of HugeInt and
- * Int/UInt/Long/ULong values.
+ * HugeInt supports the standard infix arithmetic operators (`+`, `-`, `*`, `/`, `%`)
+ * and comparison operators (`<`, `<=`, `==`, `!=`, `>=`, `>`), implemented via
+ * Kotlin’s operator-overloading mechanisms. All arithmetic and comparison
+ * operations provide overloads that accept primitive integer types
+ * (`Int`, `UInt`, `Long`, `ULong`) as the other operand, enabling natural
+ * expression syntax when mixing HugeInt with primitive values.
  *
- * Implementation is sign-magnitude, with the zero value always
- * non-negative.
+ * Internally, HugeInt uses a sign-magnitude representation. The canonical zero
+ * value is always non-negative.
  *
- * Comparison with java.math.BigInteger:
+ * ### Comparison with java.math.BigInteger
  *
- * HugeInt is a smaller, simpler implementation than []java.math.BigInteger].
- * It is generally intended for hundreds of digits, not tens-of-thousands.
- * All multiplication is performed using the schoolbook method, and Knuth
- * Algorithm-D is used for all divisions. HugeInt does not offer the prime
- * number generation and testing functions found in java.math.BigInteger.
+ * HugeInt is intentionally smaller and simpler than `BigInteger`, and is
+ * optimized for values on the order of hundreds of digits rather than
+ * tens of thousands. Multiplication uses the schoolbook algorithm, and
+ * division uses Knuth’s Algorithm D. HugeInt does not include the prime-number
+ * generation or primality-testing utilities provided by `java.math.BigInteger`.
  *
- * HugeInt differs from java.math.BigInteger in the handling of binary and bit
- * manipulation functions. HugeInt binary boolean and bit manipulation
- * functions generally work only on the magnitude, ignore the sign, and return
- * non-negative results.
- * This differs from java.math.BigInteger which claims:
- * _All operations behave as if BigIntegers were represented in twos-complement
- * notation (like Java's primitive integer types)._
+ * HugeInt also differs from `BigInteger` in its handling of bit-level and
+ * boolean operations. These operations act only on the magnitude, ignore the
+ * sign, and generally return non-negative results. This contrasts with
+ * BigInteger’s specification:
  *
- * HugeInt arithmetic operator and comparator functions allow primitive types
- * `Int/UInt/Long/ULong` as the other operand. Contrast this with BigInteger
- * where arguments must be boxed as BigInteger before being passed to
- * BigInteger methods. This reduces heap allocation pressure.
+ *    _“All operations behave as if BigIntegers were represented in two’s-complement
+ *    notation (like Java’s primitive integer types).”_
+ *
+ * ### Interoperability and Performance Considerations
+ *
+ * HugeInt stores its magnitude as little-endian 32-bit limbs in an `IntArray`,
+ * which is a true primitive array on the JVM. Results of operations are not
+ * forcibly normalized; the most-significant end may contain unused leading zero
+ * limbs. Avoiding reallocation for strict normalization reduces heap churn and
+ * is appropriate because most HugeInt instances are short-lived.
+ *
+ * Because HugeInt operator functions directly accept primitive types, arguments
+ * do not need to be boxed as `BigInteger`. This avoids unnecessary heap
+ * allocation and eliminates the need for caches of small integer values, while
+ * enabling idiomatic, readable infix arithmetic expressions.
+ *
+ * The companion type [HugeIntAccumulator] provides a mutable, arbitrary-precision
+ * accumulator designed for repeated summation and similar in-place operations,
+ * significantly reducing heap churn in accumulation-heavy workloads.
  */
 class HugeInt private constructor(val sign: Boolean, val magia: IntArray): Comparable<HugeInt> {
 
@@ -51,14 +63,11 @@ class HugeInt private constructor(val sign: Boolean, val magia: IntArray): Compa
          * This ensures that identity comparisons and optimizations relying on
          * reference equality (`===`) for zero values are valid.
          */
-                val ZERO = HugeInt(false, Magia.ZERO)
+        val ZERO = HugeInt(false, Magia.ZERO)
 
-        private val MAGIA_ONE = intArrayOf(1)
-                val ONE = HugeInt(false, MAGIA_ONE)
+        val ONE = HugeInt(false, Magia.ONE)
 
-                val TEN = HugeInt(false, intArrayOf(10))
-
-                val NEG_ONE = HugeInt(true, MAGIA_ONE) // share magia .. but no mutation allowed
+        val NEG_ONE = HugeInt(true, Magia.ONE) // share magia .. but no mutation allowed
 
         private inline fun U32(n: Int) = n.toLong() and 0xFFFF_FFFFL
 
