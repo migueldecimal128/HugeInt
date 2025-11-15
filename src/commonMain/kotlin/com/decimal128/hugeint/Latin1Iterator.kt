@@ -125,7 +125,7 @@ class CharArrayLatin1Iterator(private val chars: CharArray, off: Int, len: Int) 
     override fun getCharAt(i: Int) = chars[i]
 
     /** Returns the string representation of the subsequence covered by this iterator. */
-    override fun toString() = String(chars, off, len)
+    override fun toString() = chars.concatToString(off, off + len)
 }
 
 
@@ -152,5 +152,5 @@ class ByteArrayLatin1Iterator(private val bytes: ByteArray, off: Int, len: Int) 
     override fun getCharAt(i: Int) = (bytes[i].toInt() and 0xFF).toChar()
 
     /** Returns the string representation of the subsequence covered by this iterator. */
-    override fun toString() = String(bytes, off, len)
+    override fun toString() = bytes.decodeToString(off, off + len)
 }

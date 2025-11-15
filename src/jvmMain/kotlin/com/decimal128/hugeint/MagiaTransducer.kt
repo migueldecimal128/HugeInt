@@ -45,9 +45,10 @@ object MagiaTransducer {
         if (cmpBitLen != 0)
             return cmpBitLen
         for (i in magia.size - 1 downTo 0) {
-            val cmp = unsignedCmp(magia[i], bi.shiftRight(i * 32).toInt())
-            if (cmp != 0)
-                return cmp
+            val xLimb = magia[i]
+            val yLimb = bi.shiftRight(i * 32).toInt()
+            if (xLimb != yLimb)
+                return xLimb.toUInt().compareTo(yLimb.toUInt())
         }
         return 0
     }

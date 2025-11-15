@@ -78,18 +78,16 @@ kotlin {
         }
     }
 
-    /*
     // JS target (IR)
-    js(IR) {
-        browser()
-        nodejs()
-    }
+//    js(IR) {
+//        browser()
+//        nodejs()
+//    }
 
     // Example native targets — include only if you will build native
     // comment out any you don't need to reduce native toolchain requirements
     macosX64()
-    macosArm64()
-     */
+//    macosArm64()
 
     sourceSets {
         val commonMain by getting

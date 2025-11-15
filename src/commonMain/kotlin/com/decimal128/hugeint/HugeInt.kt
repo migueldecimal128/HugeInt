@@ -413,24 +413,46 @@ class HugeInt private constructor(val sign: Boolean, val magia: IntArray): Compa
         }
 
         /**
-         * Constructs a randomly generated non-negative HugeInt, uniformly distributed
-         * over the range 0 through (2^bitLen - 1), inclusive.
+         * Generates a random `HugeInt` with the specified bit length.
          *
-         * Each bit has a 50% chance of being set, so the actual returned bit length
-         * may be less than the requested bitLen.
+         * The magnitude is sampled uniformly from the range
+         * `0 .. (2^bitLen - 1)`. Each bit position in the magnitude is set
+         * independently with probability 0.5, so the actual bit length of the
+         * result may be smaller than `bitLen` if the most significant bits
+         * happen to be zero.
+         *
+         * When `withRandomSign == false` (the default), the result is always
+         * non-negative. When `withRandomSign == true`, a random sign is applied
+         * to non-zero magnitudes with equal probability for positive and
+         * negative. Zero is always returned as the unique `HugeInt.ZERO`, so
+         * zero occurs with **twice** the probability of any particular non-zero
+         * value.
+         *
+         * @param bitLen the number of bits to sample; must be positive.
+         * @param rng the random number generator used for the magnitude and,
+         *            when `withRandomSign` is true, for the sign.
+         * @param withRandomSign if `true`, assigns a random sign to non-zero
+         *                       values; otherwise the result is always
+         *                       non-negative.
          */
-        fun fromRandom(bitLen: Int, random: Random = Random.Default): HugeInt {
+        fun fromRandom(bitLen: Int,
+                       rng: Random = Random.Default,
+                       withRandomSign: Boolean = false): HugeInt {
             if (bitLen >= 0) {
                 var zeroTest = 0
                 val magia = Magia.newWithBitLen(bitLen)
                 var mask = (if ((bitLen and 0x1F) == 0) 0 else 1 shl (bitLen and 0x1F)) - 1
                 for (i in magia.lastIndex downTo 0) {
-                    val rand = random.nextInt() and mask
+                    val rand = rng.nextInt() and mask
                     magia[i] = rand
                     zeroTest = zeroTest or rand
                     mask = -1
                 }
-                return if (zeroTest == 0) ZERO else HugeInt(false, magia)
+                return when {
+                    zeroTest == 0 -> ZERO
+                    !withRandomSign -> HugeInt(false, magia)
+                    else -> HugeInt(rng.nextBoolean(), magia)
+                }
             }
             throw IllegalArgumentException()
         }
@@ -1470,7 +1492,7 @@ class HugeInt private constructor(val sign: Boolean, val magia: IntArray): Compa
      */
     override fun hashCode(): Int {
         var result = sign.hashCode()
-        result = 31 * result + magia.contentHashCode()
+        result = 31 * result + Magia.normalizedHashCode(magia)
         return result
     }
 
@@ -1595,13 +1617,26 @@ class HugeInt private constructor(val sign: Boolean, val magia: IntArray): Compa
     }
 
     /**
+     * Returns `true` if this value is in normalized form.
+     *
+     * A `HugeInt` is normalized when:
+     *  - it is exactly the canonical zero (`HugeInt.ZERO`), or
+     *  - its magnitude array does not contain unused leading zero limbs
+     *    (i.e., the most significant limb is non-zero).
+     *
+     * Normalization is not required for correctness, but a normalized
+     * representation avoids unnecessary high-order zero limbs.
+     */
+    fun isNormalized() = magia === Magia.ZERO || magia[magia.size - 1] != 0
+
+    /**
      * Internal helper for addition or subtraction between two HugeInts.
      *
      * @param isSub true to subtract [other] from this, false to add
      * @param other the HugeInt operand
      * @return a new HugeInt representing the result
      */
-    fun addSubImpl(isSub: Boolean, other: HugeInt): HugeInt {
+    private fun addSubImpl(isSub: Boolean, other: HugeInt): HugeInt {
         if (other === ZERO)
             return this
         if (this === ZERO)

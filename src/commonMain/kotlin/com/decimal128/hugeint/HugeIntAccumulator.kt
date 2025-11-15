@@ -185,7 +185,8 @@ class HugeIntAccumulator private constructor (
             magia = Magia.newWithFloorLen(yLen)
         sign = ySign
         limbLen = yLen
-        System.arraycopy(y, 0, magia, 0, yLen)
+        //System.arraycopy(y, 0, magia, 0, yLen)
+        y.copyInto(magia)
         return this
     }
 

@@ -1,9 +1,9 @@
 package com.decimal128.hugeint
 
-import org.junit.jupiter.api.Assertions.assertTrue
 import kotlin.math.absoluteValue
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class TestHugeIntAccum {
 

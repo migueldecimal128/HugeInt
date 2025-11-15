@@ -127,7 +127,7 @@ object Magia {
     /**
      * Returns the number of nonzero limbs in [x], excluding any leading zeros.
      */
-    fun nonZeroLimbLen(x: IntArray): Int {
+    inline fun nonZeroLimbLen(x: IntArray): Int {
         for (i in x.size - 1 downTo 0)
             if (x[i] != 0)
                 return i + 1
@@ -1823,7 +1823,7 @@ object Magia {
             if (isNegative)
                 utf8[--ib] = '-'.code.toByte()
             val len = utf8.size - ib
-            return String(utf8, ib, len)
+            return utf8.decodeToString(ib, ib + len)
         } else {
             throw IllegalArgumentException()
         }
@@ -1901,7 +1901,7 @@ object Magia {
         // Explicit bounds check to enable elimination of individual checks
         val offMin = offMaxx - 9
         if (offMin < 0 || offMaxx > utf8.size)
-            throw ArrayIndexOutOfBoundsException()
+            throw IndexOutOfBoundsException()
 
         utf8[offMaxx - 9] = (a.toInt() + '0'.code).toByte()
         utf8[offMaxx - 8] = (b.toInt() + '0'.code).toByte()
@@ -2026,7 +2026,7 @@ object Magia {
             }
             nybbleCount -= stepCount
         }
-        return String(bytes)
+        return bytes.decodeToString()
     }
 
 
@@ -2521,6 +2521,25 @@ object Magia {
         for (limb in magia)
             popCount += limb.countOneBits()
         return popCount
+    }
+
+    fun normalizedHashCode(x: IntArray): Int {
+        val xLen = nonZeroLimbLen(x)
+        var h = 0
+        var i = 0
+        while (i + 3 < xLen) {
+            h = 31 * 31 * 31 * 31 * h +
+                    31 * 31 * 31 * x[i] +
+                    31 * 31 * x[i + 1] +
+                    31 * x[i + 2] +
+                    x[i + 3]
+            i += 4
+        }
+        while (i < xLen) {
+            h = 31 * h + x[i]
+            ++i
+        }
+        return h
     }
 
 }

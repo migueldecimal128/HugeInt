@@ -2,7 +2,6 @@ package com.decimal128.hugeint
 
 import com.decimal128.hugeint.HugeIntExtensions.toBigInteger
 import org.junit.jupiter.api.Assertions.assertEquals
-import java.math.BigInteger
 import kotlin.random.Random
 import kotlin.test.Test
 

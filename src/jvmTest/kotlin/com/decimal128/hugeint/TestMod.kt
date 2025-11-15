@@ -2,11 +2,10 @@ package com.decimal128.hugeint
 
 import com.decimal128.hugeint.HugeIntExtensions.toBigInteger
 import com.decimal128.hugeint.HugeIntExtensions.toHugeInt
-import org.junit.jupiter.api.Assertions.assertThrows
-import java.math.BigInteger
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class TestMod {
 
@@ -51,10 +50,10 @@ class TestMod {
             val remHi = hiDividend % hiDivisor
             assertEquals(remBi, remHi)
         } else {
-            assertThrows(ArithmeticException::class.java) {
+            assertFailsWith<ArithmeticException> {
                 val remBi = (biDividend % biDivisor).toHugeInt()
             }
-            assertThrows(ArithmeticException::class.java) {
+            assertFailsWith<ArithmeticException> {
                 val remHi = hiDividend % hiDivisor
             }
         }
@@ -64,10 +63,10 @@ class TestMod {
             val inverse1 = hiDivisor % hiDividend
             assertEquals(inverseBi, inverse1)
         } else {
-            assertThrows(ArithmeticException::class.java) {
+            assertFailsWith<ArithmeticException> {
                 val inverseBi = (biDivisor % biDividend).toHugeInt()
             }
-            assertThrows(ArithmeticException::class.java) {
+            assertFailsWith<ArithmeticException> {
                 val inverseHi = hiDivisor % hiDividend
             }
 
