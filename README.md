@@ -20,7 +20,8 @@ the complexity of `java.math.BigInteger`.
 - **Arbitrary-precision signed integers**
 - Arithmetic infix operators: `+ - * / %`
 - Comparator operators: `< <= == != >= >`
-- Integer math functions: `sqr() isqrt() pow(n) abs()`
+- Integer math functions: `sqr() isqrt() pow(n) abs() gcd()`
+- Binary bit-manipulation and boolean operations
 - Accepts primitive operands (`Int`, `UInt`, `Long`, `ULong`) without boxing
 - Schoolbook multiplication (O(n²))
 - Knuth’s Algorithm D for division
