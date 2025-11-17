@@ -1336,7 +1336,7 @@ class HugeInt private constructor(val sign: Boolean, val magia: IntArray): Compa
      * @param bitIndex 0-based, starting from the least-significant bit
      * @return true if the bit is set, false otherwise
      */
-    fun testBit(bitIndex: Int): Boolean = Magia.testBit(this.magia, bitIndex)
+    fun isBitSet(bitIndex: Int): Boolean = Magia.testBit(this.magia, bitIndex)
 
     /**
      * Returns the index of the rightmost set bit (number of trailing zeros).
@@ -1347,12 +1347,12 @@ class HugeInt private constructor(val sign: Boolean, val magia: IntArray): Compa
      *
      * @return bit index of the lowest set bit, or -1 if ZERO
      */
-    fun trailingZeroCount(): Int = Magia.ntz(this.magia)
+    fun countTrailingZeroBits(): Int = Magia.ntz(this.magia)
 
     /**
      * Returns the number of bits set in the magnitude, ignoring the sign.
      */
-    fun magnitudeBitCount(): Int = Magia.bitPopulationCount(this.magia)
+    fun magnitudeCountOneBits(): Int = Magia.bitPopulationCount(this.magia)
 
     /**
      * Returns a new HugeInt representing the bitwise AND of the magnitudes,

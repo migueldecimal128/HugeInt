@@ -17,11 +17,11 @@ class TestRandom {
             val biBitLen = bi.bitLength()
             assertEquals(biBitLen, hiBitLen)
 
-            val hiBitCount = hi.magnitudeBitCount()
+            val hiBitCount = hi.magnitudeCountOneBits()
             val biBitCount = bi.bitCount()
             assertEquals(biBitCount, hiBitCount)
 
-            val hiNtz = hi.trailingZeroCount()
+            val hiNtz = hi.countTrailingZeroBits()
             val biNtz = bi.getLowestSetBit()
             assertEquals(biNtz, hiNtz)
         }
