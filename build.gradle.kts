@@ -57,6 +57,8 @@ tasks.register<Test>("testHsdis") {
     }
 }
 
+
+
 /*
  * Kotlin Multiplatform configuration.
  *
@@ -68,6 +70,10 @@ tasks.register<Test>("testHsdis") {
  */
 @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
 kotlin {
+
+    applyDefaultHierarchyTemplate()
+
+    compilerOptions.optIn.add("kotlinx.cinterop.ExperimentalForeignApi")
 
     // ---------------------------
     // 1. Target configurations
@@ -94,16 +100,40 @@ kotlin {
         nodejs()
     }
 
-    macosX64()
-    macosArm64()
-    // (Add linuxX64() or mingwX64() if needed)
+    macosX64 {
+        compilations["main"].cinterops {
+            val unsigned_mul_hi by creating {
+                defFile(project.file("src/nativeInterop/cinterop/unsigned_mul_hi.def"))
+            }
+        }
+    }
+    //macosArm64()
+    //linuxX64()
+    //mingwX64()
 
+    /*
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
+        compilations.getByName("main") {
+            cinterops {
+                val unsigned_mul_hi by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/unsigned_mul_hi.def"))
+                }
+            }
+        }
+    }
 
+     */
     // ---------------------------
     // 2. Source-set hierarchy
     // ---------------------------
 
     sourceSets {
+        /*
+        all {
+            languageSettings.optIn("kotlinx.cinterop.ExperimentalForeignApi")
+        }
+
+         */
 
         val commonMain by getting
         val commonTest by getting {
@@ -112,62 +142,11 @@ kotlin {
             }
         }
 
-        val jvmMain by getting
-        val jvmTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-            }
-        }
-
-        val jsMain by getting
-        val jsTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-            }
-        }
-
-        val wasmJsMain by getting
-        val wasmJsTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-            }
-        }
-
-        val wasmWasiMain by getting
-        val wasmWasiTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-            }
-        }
-
         val macosX64Main by getting
-        val macosArm64Main by getting
+        //val macosArm64Main by getting
+        //val linuxX64Main by getting
+        //val mingwX64Main by getting
 
-        // ---------------------------------------------
-        // Shared fallback source set for JS + WASM
-        // ---------------------------------------------
-        val jsWasmMain by creating {
-            dependsOn(commonMain)
-        }
-        jsMain.dependsOn(jsWasmMain)
-        wasmJsMain.dependsOn(jsWasmMain)
-        wasmWasiMain.dependsOn(jsWasmMain)
-
-        val jsWasmTest by creating {
-            dependsOn(commonTest)
-        }
-        jsTest.dependsOn(jsWasmTest)
-        wasmJsTest.dependsOn(jsWasmTest)
-        wasmWasiTest.dependsOn(jsWasmTest)
-
-        // ---------------------------------------------
-        // Shared implementation for all Native targets
-        // ---------------------------------------------
-        val nativeMain by creating {
-            dependsOn(commonMain)
-        }
-        macosX64Main.dependsOn(nativeMain)
-        macosArm64Main.dependsOn(nativeMain)
     }
 
 }

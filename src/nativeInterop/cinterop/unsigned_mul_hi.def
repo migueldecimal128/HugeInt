@@ -1,0 +1,7 @@
+headers = unsigned_mul_hi.h
+package = unsignedmulhi
+
+staticLibraries = libunsigned_mul_hi.a
+libraryPaths = src/nativeInterop/cinterop
+
+compilerOpts = -Isrc/nativeInterop/cinterop -O3 -std=c11
