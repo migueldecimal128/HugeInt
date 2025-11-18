@@ -30,7 +30,7 @@ the complexity of `java.math.BigInteger`.
 - Knuth’s Algorithm D for division
 - Sign–magnitude representation with canonical zero
 - Little-endian 32-bit limbs stored in an `IntArray`
-- High-performance mutable accumulator: **HugeIntAccumulator**
+- Heap-friendly mutable accumulator: **HugeIntAccumulator**
 
 ---
 
