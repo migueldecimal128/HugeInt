@@ -5,7 +5,7 @@
 package com.decimal128.hugeint.intrinsic
 
 import kotlinx.cinterop.ExperimentalForeignApi
-import unsignedmulhi.unsigned_mul_hi
+import com.decimal128.unsignedmulhi.unsigned_mul_hi
 
 @OptIn(ExperimentalForeignApi::class)
 actual inline fun unsignedMulHi(x: ULong, y: ULong): ULong =
