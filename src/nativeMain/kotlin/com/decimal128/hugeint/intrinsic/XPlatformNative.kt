@@ -2,7 +2,7 @@
 
 @file:Suppress("NOTHING_TO_INLINE")
 
-package com.decimal128.hugeint
+package com.decimal128.hugeint.intrinsic
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import unsignedmulhi.unsigned_mul_hi

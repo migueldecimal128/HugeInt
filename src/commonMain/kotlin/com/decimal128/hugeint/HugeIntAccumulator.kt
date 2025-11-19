@@ -4,6 +4,7 @@
 
 package com.decimal128.hugeint
 
+import com.decimal128.hugeint.intrinsic.unsignedMulHi
 import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min

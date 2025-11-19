@@ -2,7 +2,7 @@
 
 @file:Suppress("NOTHING_TO_INLINE")
 
-package com.decimal128.hugeint
+package com.decimal128.hugeint.intrinsic
 
 actual inline fun unsignedMulHi(x: ULong, y: ULong): ULong {
     val x0 = (x and 0xFFFF_FFFFu).toULong()
