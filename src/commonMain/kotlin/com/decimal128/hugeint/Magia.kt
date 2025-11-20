@@ -1906,7 +1906,6 @@ object Magia {
                 val chunk = newLenAndRemainder and 0xFFFF_FFFFuL
                 renderChunk9(chunk, utf8, ib)
                 wordLen = (newLenAndRemainder shr 32).toInt()
-                t = newCopyWithExactLen(t, wordLen)
                 ib -= 9
             }
             ib -= renderChunkTail(t[0].toUInt(), utf8, ib)
