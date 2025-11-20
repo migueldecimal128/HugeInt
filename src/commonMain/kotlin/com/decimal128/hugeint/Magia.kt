@@ -1869,7 +1869,7 @@ object Magia {
      *  - Estimates the required digit count from [bitLen].
      *  - Copies [magia] into a temporary mutable array.
      *  - Repeatedly divides the number by 1e9 to extract 9-digit chunks.
-     *  - Converts each chunk into ASCII digits using [renderChunk9] and [renderChunkTail].
+     *  - Converts each chunk into ASCII digits using [render9DigitsBeforeIndex] and [renderTailDigitsBeforeIndex].
      *  - Prepends a leading ‘-’ if [isNegative] is true.
      *
      * @param isNegative whether to prefix the result with a minus sign.
@@ -1899,7 +1899,7 @@ object Magia {
             val utf8 = ByteArray(maxSignedLen)
             val limbLen = nonZeroLimbLen(x, xLen)
             val t = newCopyWithExactLen(x, limbLen)
-            val len = toUtf8(utf8, utf8.size, isNegative, t, limbLen)
+            val len = destructiveToUtf8BeforeIndex(utf8, utf8.size, isNegative, t, limbLen)
             return utf8.decodeToString(utf8.size - len, utf8.size)
         } else {
             throw IllegalArgumentException()
@@ -1955,7 +1955,7 @@ object Magia {
      *
      * @return the number of bytes written into `utf8`.
      */
-    fun toUtf8(utf8: ByteArray, ibMaxx: Int, isNegative: Boolean, tmp: IntArray, tmpLen: Int): Int {
+    fun destructiveToUtf8BeforeIndex(utf8: ByteArray, ibMaxx: Int, isNegative: Boolean, tmp: IntArray, tmpLen: Int): Int {
         if (tmpLen > 0 && tmpLen <= tmp.size && tmp[tmpLen - 1] != 0 &&
             ibMaxx > 0 && ibMaxx <= utf8.size) {
             var ib = ibMaxx
@@ -1963,11 +1963,11 @@ object Magia {
             while (limbsRemaining > 1) {
                 val newLenAndRemainder = mutateBarrettDivBy1e9(tmp, limbsRemaining)
                 val chunk = newLenAndRemainder and 0xFFFF_FFFFuL
-                renderChunk9(chunk, utf8, ib)
+                render9DigitsBeforeIndex(chunk, utf8, ib)
                 limbsRemaining = (newLenAndRemainder shr 32).toInt()
                 ib -= 9
             }
-            ib -= renderChunkTail(tmp[0].toUInt(), utf8, ib)
+            ib -= renderTailDigitsBeforeIndex(tmp[0].toUInt(), utf8, ib)
             if (isNegative)
                 utf8[--ib] = '-'.code.toByte()
             val len = utf8.size - ib
@@ -1985,15 +1985,37 @@ object Magia {
      * Uses reciprocal multiplication by `0xCCCCCCCD` (fixed-point reciprocal of 10)
      * to perform fast division and extract digits.
      *
-     * @param n the integer to render (interpreted as unsigned 32-bit).
+     * If the value of [w] is zero then a zero digit is written.
+     *
+     * @param w the integer to render (interpreted as unsigned 32-bit).
      * @param utf8 the UTF-8 byte buffer to write digits into.
      * @param offMaxx the maximum exclusive offset within [utf8];
      *                digits are written backward from `offMaxx - 1`.
-     * @return the number of bytes written.
+     * @return the number of bytes/digits written.
      */
-    private fun renderChunkTail(w: UInt, utf8: ByteArray, offMaxx: Int): Int {
+    fun renderTailDigitsBeforeIndex(w: UInt, utf8: ByteArray, offMaxx: Int): Int {
         var t = w.toULong()
         var ib = offMaxx
+        if (w >= 10000uL) {
+            val t0 = unsignedMulHi(t, M_U64_DIV_1E4) shr S_U64_DIV_1E4
+            val abcd = t - (t0 * 10000uL)
+            t = t0
+            val ab = (abcd * M_U32_DIV_1E2) shr S_U32_DIV_1E2
+            val cd = abcd - (ab * 100uL)
+            val a = (ab * M_U32_DIV_1E1) shr S_U32_DIV_1E1
+            val b = ab - (a * 10uL)
+            val c = (cd * M_U32_DIV_1E1) shr S_U32_DIV_1E1
+            val d = cd - (c * 10uL)
+            if (ib - 4 >= 0 && ib <= utf8.size) {
+                utf8[ib - 4] = (a.toInt() + '0'.code).toByte()
+                utf8[ib - 3] = (b.toInt() + '0'.code).toByte()
+                utf8[ib - 2] = (c.toInt() + '0'.code).toByte()
+                utf8[ib - 1] = (d.toInt() + '0'.code).toByte()
+                ib -= 4
+            } else {
+                IllegalArgumentException()
+            }
+        }
         do {
             val divTen = (t * 0xCCCCCCCDuL) shr 35
             val digit = (t - (divTen * 10uL)).toInt()
@@ -2021,7 +2043,7 @@ object Magia {
      * @param offMaxx the maximum exclusive offset within [utf8];
      * digits occupy the range `offMaxx - 9 .. offMaxx - 1`.
      */
-    private fun renderChunk9(dw: ULong, utf8: ByteArray, offMaxx: Int) {
+    fun render9DigitsBeforeIndex(dw: ULong, utf8: ByteArray, offMaxx: Int) {
         val abcde = unsignedMulHi(dw, M_U64_DIV_1E4) shr S_U64_DIV_1E4
         val fghi  = dw - (abcde * 10000uL)
 
