@@ -861,12 +861,12 @@ object Magia {
      *
      * @param x the limb array to mutate (little-endian base-2³²).
      * @param pow10 the decimal power (0..9) selecting the precomputed multiplier.
-     * @param a the 32-bit addend fused into the result.
+     * @param a the unsigned 32-bit addend fused into the result.
      */
-    fun mutateFmaPow10(x: IntArray, pow10: Int, a: Int) {
+    fun mutateFmaPow10(x: IntArray, pow10: Int, a: UInt) {
         if (pow10 in 0..9) {
             val m64 = POW10[pow10].toULong()
-            var carry = dw32(a)
+            var carry = a.toULong()
             for (i in x.indices) {
                 val t = dw32(x[i]) * m64 + carry
                 x[i] = t.toInt()
@@ -2657,7 +2657,7 @@ object Magia {
                 leadingZeroSeen = leadingZeroSeen or (ch == '0')
                 ch = src.nextChar() // discard all leading zeros
             }
-            var accumulator = 0
+            var accumulator = 0u
             var accumulatorDigitCount = 0
             val remainingLen = src.remainingLen() + if (ch == '\u0000') 0 else 1
             // val bitLen = (remainingLen * 13607 + 4095) ushr 12
@@ -2681,12 +2681,12 @@ object Magia {
                 if (ch !in '0'..'9')
                     break
                 val n = ch - '0'
-                accumulator = accumulator * 10 + n
+                accumulator = accumulator * 10u + n.toUInt()
                 ++accumulatorDigitCount
                 if (accumulatorDigitCount < 9)
                     continue
                 mutateFmaPow10(z, 9, accumulator)
-                accumulator = 0
+                accumulator = 0u
                 accumulatorDigitCount = 0
             }
             if (ch == '\u0000' && chLast != '_') {
