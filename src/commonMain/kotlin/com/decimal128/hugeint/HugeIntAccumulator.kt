@@ -4,6 +4,7 @@
 
 package com.decimal128.hugeint
 
+import com.decimal128.hugeint.Sign.Companion.POSITIVE
 import com.decimal128.hugeint.intrinsic.unsignedMulHi
 import kotlin.math.absoluteValue
 import kotlin.math.max
@@ -63,11 +64,11 @@ import kotlin.math.min
  * @see HugeInt for the immutable arbitrary-precision integer implementation.
  */
 class HugeIntAccumulator private constructor (
-    var sign: Boolean,
+    var sign: Sign,
     var magia: IntArray,
     var limbLen: Int,
     var tmp1: IntArray) {
-    constructor() : this(false, IntArray(4), 0, Magia.ZERO)
+    constructor() : this(Sign.POSITIVE, IntArray(4), 0, Magia.ZERO)
 
     private inline fun validate() {
         check (limbLen >= 0 &&
@@ -87,7 +88,7 @@ class HugeIntAccumulator private constructor (
      */
     fun setZero(): HugeIntAccumulator {
         validate()
-        sign = false
+        sign = POSITIVE
         limbLen = 0
         return this
     }
@@ -137,7 +138,7 @@ class HugeIntAccumulator private constructor (
      * @param hi the source [HugeInt].
      * @return this accumulator instance, for call chaining.
      */
-    fun set(hi: HugeInt): HugeIntAccumulator = set(hi.sign, hi.magia, Magia.nonZeroLimbLen(hi.magia))
+    fun set(hi: HugeInt): HugeIntAccumulator = set(hi.sign.isNegative, hi.magia, Magia.nonZeroLimbLen(hi.magia))
 
     /**
      * Sets this accumulator’s value from another [HugeIntAccumulator].
@@ -148,7 +149,7 @@ class HugeIntAccumulator private constructor (
      * @param hia the source [HugeIntAccumulator].
      * @return this accumulator instance, for call chaining.
      */
-    fun set(hia: HugeIntAccumulator): HugeIntAccumulator = set(hia.sign, hia.magia, hia.limbLen)
+    fun set(hia: HugeIntAccumulator): HugeIntAccumulator = set(hia.sign.isNegative, hia.magia, hia.limbLen)
 
     /**
      * Sets this accumulator’s value from a raw sign and 64-bit magnitude.
@@ -162,7 +163,7 @@ class HugeIntAccumulator private constructor (
      * @return this accumulator instance, for call chaining.
      */
     fun set(sign: Boolean, dw: ULong): HugeIntAccumulator {
-        this.sign = sign
+        this.sign = Sign(sign)
         // limbLen = if (dw == 0uL) 0 else if ((dw shr 32) == 0uL) 1 else 2
         limbLen = (64 - dw.countLeadingZeroBits() + 31) shr 5
         magia[0] = dw.toInt()
@@ -187,7 +188,7 @@ class HugeIntAccumulator private constructor (
     private fun set(ySign: Boolean, y: IntArray, yLen: Int): HugeIntAccumulator {
         if (magia.size < yLen)
             magia = Magia.newWithFloorLen(yLen)
-        sign = ySign
+        sign = Sign(ySign)
         limbLen = yLen
         //System.arraycopy(y, 0, magia, 0, yLen)
         y.copyInto(magia)
@@ -207,7 +208,7 @@ class HugeIntAccumulator private constructor (
      * @return a new [HugeInt] containing the current value of this accumulator.
      */
     fun toHugeInt(): HugeInt =
-        HugeInt.fromLittleEndianIntArray(sign, magia, limbLen)
+        HugeInt.fromLittleEndianIntArray(sign.isNegative, magia, limbLen)
 
     /**
      * Adds the given Int value to this accumulator.
@@ -259,7 +260,7 @@ class HugeIntAccumulator private constructor (
      * @see plusAssign(Long)
      */
     operator fun plusAssign(hi: HugeInt) =
-        mutateAddImpl(hi.sign, hi.magia, Magia.nonZeroLimbLen(hi.magia))
+        mutateAddImpl(hi.sign.isNegative, hi.magia, Magia.nonZeroLimbLen(hi.magia))
 
     /**
      * Adds the given HugeIntAccumulator value to this accumulator.
@@ -267,7 +268,8 @@ class HugeIntAccumulator private constructor (
      * @param hia the value to add.
      * @see plusAssign(Long)
      */
-    operator fun plusAssign(hia: HugeIntAccumulator) = mutateAddImpl(hia.sign, hia.magia, hia.limbLen)
+    operator fun plusAssign(hia: HugeIntAccumulator) =
+        mutateAddImpl(hia.sign.isNegative, hia.magia, hia.limbLen)
 
     /**
      * Subtracts the given Int value from this accumulator.
@@ -317,7 +319,7 @@ class HugeIntAccumulator private constructor (
      * @see minusAssign(Long)
      */
     operator fun minusAssign(hi: HugeInt) =
-        mutateAddImpl(!hi.sign, hi.magia, Magia.nonZeroLimbLen(hi.magia))
+        mutateAddImpl(hi.sign.isPositive, hi.magia, Magia.nonZeroLimbLen(hi.magia))
 
     /**
      * Subtracts the given HugeIntAccumulator value from this accumulator.
@@ -325,7 +327,8 @@ class HugeIntAccumulator private constructor (
      * @param hia the value to subtract.
      * @see minusAssign(Long)
      */
-    operator fun minusAssign(hia: HugeIntAccumulator) = mutateAddImpl(!hia.sign, hia.magia, hia.limbLen)
+    operator fun minusAssign(hia: HugeIntAccumulator) =
+        mutateAddImpl(hia.sign.isPositive, hia.magia, hia.limbLen)
 
     /**
      * Multiplies this accumulator by the given value in place.
@@ -397,7 +400,7 @@ class HugeIntAccumulator private constructor (
      * @see timesAssign(Long)
      */
     operator fun timesAssign(hi: HugeInt) =
-        mutateMulImpl(hi.sign, hi.magia, Magia.nonZeroLimbLen(hi.magia))
+        mutateMulImpl(hi.sign.isNegative, hi.magia, Magia.nonZeroLimbLen(hi.magia))
 
     /**
      * Multiplies this accumulator by the given HugeIntAccumulator value.
@@ -412,7 +415,7 @@ class HugeIntAccumulator private constructor (
         if (this === hia)
             mutateSquare()  // prevent aliasing problems & improve performance
         else
-            mutateMulImpl(hia.sign, hia.magia, hia.limbLen)
+            mutateMulImpl(hia.sign.isNegative, hia.magia, hia.limbLen)
     }
 
     /**
@@ -587,12 +590,12 @@ class HugeIntAccumulator private constructor (
         val rawULong = toRawULong()
         when {
             dw == 0uL -> {}
-            this.sign == otherSign -> mutateAddMagImpl(dw)
+            this.sign.isNegative == otherSign -> mutateAddMagImpl(dw)
             limbLen == 0 -> set(otherSign, dw)
             limbLen > 2 || rawULong > dw -> {
                 Magia.mutateSub(magia, limbLen, dw)
                 limbLen = Magia.nonZeroLimbLen(magia, limbLen)
-                sign = sign and (limbLen > 0)
+                sign = Sign(sign.isNegative and (limbLen > 0))
             }
             rawULong < dw -> set(otherSign, dw - rawULong)
             else -> setZero()
@@ -626,14 +629,14 @@ class HugeIntAccumulator private constructor (
             }
 
             limbLen == 0 -> { set(ySign, y, yLen); return }
-            this.sign == ySign -> { mutateAddMagImpl(y, yLen); return }
+            this.sign.isNegative == ySign -> { mutateAddMagImpl(y, yLen); return }
         }
         val cmp = Magia.compare(magia, limbLen, y, yLen)
         when {
             cmp > 0 -> {
                 Magia.mutateSub(magia, limbLen, y, yLen)
                 limbLen = Magia.nonZeroLimbLen(magia, limbLen)
-                sign = sign and (limbLen > 0)
+                sign = Sign(sign.isNegative and (limbLen > 0))
             }
             cmp < 0 -> {
                 if (magia.size < yLen)
@@ -642,7 +645,7 @@ class HugeIntAccumulator private constructor (
                     magia.fill(0, limbLen, yLen)
                 Magia.mutateReverseSub(magia, yLen, y, yLen)
                 limbLen = Magia.nonZeroLimbLen(magia, yLen)
-                sign = ySign
+                sign = Sign(ySign)
             }
             else -> {
                 setZero()
@@ -848,7 +851,7 @@ class HugeIntAccumulator private constructor (
             magia = tmp1
             tmp1 = t
             limbLen = Magia.sqr(magia, t, limbLen)
-            sign = false
+            sign = POSITIVE
         }
     }
 
@@ -861,7 +864,7 @@ class HugeIntAccumulator private constructor (
      *
      * @return the decimal string representation of this accumulator.
      */
-    override fun toString(): String = Magia.toString(this.sign, this.magia, this.limbLen)
+    override fun toString(): String = Magia.toString(this.sign.isNegative, this.magia, this.limbLen)
 
 }
 

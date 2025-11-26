@@ -5,10 +5,11 @@ package com.decimal128.hugeint
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class TestHashCode {
 
-    val verbose = false
+    val verbose = true
 
     @Test
     fun testSignHashCode() {
@@ -25,12 +26,18 @@ class TestHashCode {
     @Test
     fun testPosNegHash() {
         repeat(1000) {
-            val hiPos = HugeInt.fromRandom(bitLen = rng.nextInt(500))
+            val hiPos = HugeInt.fromRandom(bitLen = rng.nextInt(10))
+            if (verbose)
+                println("hiPos:$hiPos")
             // hiNeg will not be negative in the case of zero
             val hiNeg = hiPos.negate()
+            assertTrue( hiNeg + hiPos EQ 0)
 
             val hashPos = hiPos.hashCode()
             val hashNeg = hiNeg.hashCode()
+
+            if (verbose)
+                println("hashPos:$hashPos hashNeg:$hashNeg")
 
             val hashPosMag = hashPos - (31 * false.hashCode())
             // hiNeg will not be negative in the case of zero
