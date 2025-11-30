@@ -2102,11 +2102,11 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
      */
     private fun divModULongHelper(dwSign: Boolean, dwMag: ULong): Pair<BigInt, BigInt> {
         val lo = dwMag.toUInt()
-        val hi = (dwMag shr 32).toUInt()
+        val bi = (dwMag shr 32).toUInt()
         return when {
             dwMag == 0uL -> throw ArithmeticException("div by zero")
-            hi == 0u -> divModUIntHelper(dwSign, lo)
-            else -> divModHelper(Sign(dwSign), intArrayOf(lo.toInt(), hi.toInt()))
+            bi == 0u -> divModUIntHelper(dwSign, lo)
+            else -> divModHelper(Sign(dwSign), intArrayOf(lo.toInt(), bi.toInt()))
         }
     }
 
@@ -2222,17 +2222,17 @@ operator fun UInt.rem(other: BigInt) = other.remInverse(this)
 operator fun Long.rem(other: BigInt) = other.remInverse(this)
 operator fun ULong.rem(other: BigInt) = other.remInverse(false, this)
 
-operator fun Int.compareTo(hi: BigInt) =
-    -hi.compareToHelper(this < 0, this.absoluteValue.toUInt().toULong())
+operator fun Int.compareTo(bi: BigInt) =
+    -bi.compareToHelper(this < 0, this.absoluteValue.toUInt().toULong())
 
-operator fun UInt.compareTo(hi: BigInt) =
-    -hi.compareToHelper(false, this.toULong())
+operator fun UInt.compareTo(bi: BigInt) =
+    -bi.compareToHelper(false, this.toULong())
 
-operator fun Long.compareTo(hi: BigInt) =
-    -hi.compareToHelper(this < 0, this.absoluteValue.toULong())
+operator fun Long.compareTo(bi: BigInt) =
+    -bi.compareToHelper(this < 0, this.absoluteValue.toULong())
 
-operator fun ULong.compareTo(hi: BigInt) =
-    -hi.compareToHelper(false, this)
+operator fun ULong.compareTo(bi: BigInt) =
+    -bi.compareToHelper(false, this)
 
 /**
  * Compares this [Int] value with a [BigInt] for numerical equality
