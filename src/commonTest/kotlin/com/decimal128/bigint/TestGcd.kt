@@ -2,6 +2,7 @@
 
 package com.decimal128.bigint
 
+import com.decimal128.bigint.BigInt.Companion.gcd
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -30,34 +31,34 @@ class TestGcd {
         val a = x * k
         val b = y * k
 
-        val gcdAB = a.gcd(b)
-        val gcdXY = x.gcd(y)
+        val gcdAB = gcd(a, b)
+        val gcdXY = gcd(x, y)
         assertEquals(gcdAB, k * gcdXY)
     }
 
     fun testSymmetry(x: BigInt, y: BigInt) {
-        val gcdXY = x.gcd(y)
-        val gcdYX = y.gcd(x)
+        val gcdXY = gcd(x, y)
+        val gcdYX = gcd(y, x)
         assertEquals(gcdXY, gcdYX)
     }
 
     fun testIdempotence(x: BigInt) {
-        val gcdXX = x.gcd(x)
+        val gcdXX = gcd(x, x)
         assertEquals(gcdXX, x.abs())
     }
 
     fun testZero(x: BigInt) {
-        val gcdXZero = x.gcd(BigInt.ZERO)
-        val gcdZeroX = BigInt.ZERO.gcd(x)
+        val gcdXZero = gcd(x, BigInt.ZERO)
+        val gcdZeroX = gcd(0.toBigInt(), x)
         assertEquals(gcdXZero, x.abs())
         assertEquals(gcdZeroX, x.abs())
     }
 
     fun testSigns(x: BigInt, y: BigInt) {
-        val gcd0 = x.gcd(y)
-        val gcd1 = x.gcd(y.negate())
-        val gcd2 = x.negate().gcd(y)
-        val gcd3 = x.negate().gcd(y.negate())
+        val gcd0 = gcd(x, y)
+        val gcd1 = gcd(x, y.negate())
+        val gcd2 = gcd(x.negate(), y)
+        val gcd3 = gcd(x.negate(), y.negate())
 
         assertEquals(gcd0, gcd1)
         assertEquals(gcd0, gcd2)
@@ -87,8 +88,8 @@ class TestGcd {
         val k = BigInt.from("115399892")
         val a = k * x
         val b = k * y
-        val gcdAB = a.gcd(b)
-        val gcdXY = x.gcd(y)
+        val gcdAB = gcd(a, b)
+        val gcdXY = gcd(x, y)
         val gcdXY_k = k * gcdXY
         if (verbose) {
             println("x:$x y:$y k:$k a:$a b:$b")
