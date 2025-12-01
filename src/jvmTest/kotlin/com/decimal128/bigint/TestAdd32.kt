@@ -21,34 +21,33 @@ class TestAdd32 {
     }
 
     fun testUnsigned() {
-        val hi = randomHi(300)
-        val bi = hi.toBigInteger()
+        val kbi = BigInt.fromRandom(300)
+        val jbi = kbi.toBigInteger()
         val w = rng.nextUInt()
         if (verbose)
-            println("hi:$hi w:$w")
-        val sumBi = (bi + BigInteger.valueOf(w.toLong())).toBigInt()
-        val sum1 = hi + BigInt.from(w)
-        val sum2 = hi + w
-        val sum3 = w + hi
+            println("kbi:$kbi w:$w")
+        val sumBi = (jbi + BigInteger.valueOf(w.toLong())).toBigInt()
+        val sum1 = kbi + BigInt.from(w)
+        val sum2 = kbi + w
+        val sum3 = w + kbi
         assertEquals(sumBi, sum1)
         assertEquals(sum1, sum2)
         assertEquals(sum2, sum3)
     }
 
     fun testSigned() {
-        val hi = randomHi(300)
-        val bi = hi.toBigInteger()
+        val kbi = BigInt.fromRandom(300)
+        val jbi = kbi.toBigInteger()
         val n = rng.nextInt()
         if (verbose)
-            println("hi:$hi n:$n")
-        val sumBi = (bi + BigInteger.valueOf(n.toLong())).toBigInt()
-        val sum1 = hi + BigInt.from(n)
-        val sum2 = hi + n
-        val sum3 = n + hi
+            println("hi:$kbi n:$n")
+        val sumBi = (jbi + BigInteger.valueOf(n.toLong())).toBigInt()
+        val sum1 = kbi + BigInt.from(n)
+        val sum2 = kbi + n
+        val sum3 = n + kbi
         assertEquals(sumBi, sum1)
         assertEquals(sum1, sum2)
         assertEquals(sum2, sum3)
-
     }
 
     val rng = Random.Default
@@ -92,10 +91,19 @@ class TestAdd32 {
 
     @Test
     fun testProblem3() {
-        val hi = BigInt.from("35689796992407102546798857499")
-        val bi = hi.toBigInteger()
-        val hi2 = bi.toBigInt()
-        assert(hi EQ hi2)
+        val kbi = BigInt.from("35689796992407102546798857499")
+        val jbi = kbi.toBigInteger()
+        val kbi2 = jbi.toBigInt()
+        assert(kbi EQ kbi2)
+    }
+
+    @Test
+    fun testProblem4() {
+        val kbi = BigInt.from("310032710060098610463334926699")
+        val n = -1843762480
+        val expected = BigInt.from("310032710060098610461491164219")
+        val observed = kbi + n
+        assertEquals(expected, observed)
     }
 
 }

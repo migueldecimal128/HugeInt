@@ -36,14 +36,14 @@ class TestMagia {
         for (i in 0..1000) {
             val jbi = randJbi()
             testBitLen(jbi)
-            testRoundTripBi(jbi)
+            testRoundTripJbi(jbi)
             testRoundTripStr(jbi.toString())
             testRoundTripShift(jbi)
         }
     }
 
 
-    fun testRoundTripBi(jbi: BigInteger) {
+    fun testRoundTripJbi(jbi: BigInteger) {
         val car = MagiaTransducer.magiaFromBi(jbi)
         val jbi2 = MagiaTransducer.magiaToBi(car)
         Assertions.assertEquals(jbi, jbi2)

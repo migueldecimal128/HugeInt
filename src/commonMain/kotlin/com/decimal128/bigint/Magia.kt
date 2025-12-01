@@ -548,30 +548,11 @@ object Magia {
      * If the result is zero, returns [ZERO].
      */
     fun newSub(x: IntArray, y: IntArray): IntArray {
-        check (compare(x, y) >= 0)
-        val z = IntArray(nonZeroLimbLen(x))
-        var orAccumulator = 0
-        var borrow = 0uL
-        val min = min(z.size, min(x.size, y.size))
-        var i = 0
-        while (i < min) {
-            val t = dw32(x[i]) - dw32(y[i]) - borrow
-            val zi = t.toInt()
-            z[i] = zi
-            orAccumulator = orAccumulator or zi
-            borrow = t shr 63
-            ++i
-        }
-        while (i < x.size && i < z.size) {
-            val t = dw32(x[i]) - borrow
-            val zi = t.toInt()
-            z[i] = zi
-            orAccumulator = orAccumulator or zi
-            borrow = t shr 63
-            ++i
-        }
-        check (borrow == 0uL)
-        return if (orAccumulator != 0) z else ZERO
+        val xLen = nonZeroLimbLen(x)
+        val yLen = nonZeroLimbLen(y)
+        val z = IntArray(xLen)
+        val zLen = setSub(z, x, xLen, y, yLen)
+        return if (zLen == 0) ZERO else z
     }
 
     /**
@@ -607,36 +588,56 @@ object Magia {
         }
     }
 
+    fun setSub(z: IntArray, x: IntArray, xLen: Int, y: IntArray, yLen: Int): Int {
+        require (xLen >= 0 && xLen <= x.size && xLen <= z.size && yLen >= 0 && yLen <= y.size)
+        val xLen2 = nonZeroLimbLen(x, xLen)
+        val yLen2 = nonZeroLimbLen(y, yLen)
+        check (compare(x, xLen2, y, yLen2) >= 0)
+        var borrow = 0uL
+        var lastNonZeroIndex = -1
+        if (xLen2 >= yLen2) {
+            var i = 0
+            while (i < yLen2) {
+                val t = dw32(x[i]) - dw32(y[i]) - borrow
+                val zi = t.toInt()
+                z[i] = zi
+                val nonZeroMask = (zi or -zi) shr 31
+                lastNonZeroIndex = (lastNonZeroIndex and nonZeroMask.inv()) or (i and nonZeroMask)
+                borrow = t shr 63
+                ++i
+            }
+            while (i < xLen2) {
+                val t = dw32(x[i]) - borrow
+                val zi = t.toInt()
+                z[i] = zi
+                val nonZeroMask = (zi or -zi) shr 31
+                lastNonZeroIndex = (lastNonZeroIndex and nonZeroMask.inv()) or (i and nonZeroMask)
+                borrow = t shr 63
+                ++i
+            }
+            if (borrow == 0uL)
+                return lastNonZeroIndex + 1
+        }
+        throw ArithmeticException("minuend is smaller than subtrahend")
+    }
+
     /**
      * Subtracts the first [yLen] limbs of [y] from the first [xLen] limbs of [x], mutating [x] in place.
      *
      * Requires that [x] is greater than or equal to [y].
      *
-     * @throws IllegalArgumentException if [xLen] or [yLen] are out of range for [x] or [y].
+     * @throws ArithmeticException if [xLen] or [yLen] are out of range for [x] or [y].
+     * @throws IllegalArgumentException if xLen or yLen are out of bounds
+     * @returns the new normalized limb length
      */
-    fun mutateSub(x: IntArray, xLen: Int, y: IntArray, yLen: Int) {
+    fun mutateSub(x: IntArray, xLen: Int, y: IntArray, yLen: Int): Int {
         if (xLen >= 0 && xLen <= x.size && yLen >= 0 && yLen <= y.size) {
             check(xLen == 0 || x[xLen - 1] != 0)
             check(yLen == 0 || y[yLen - 1] != 0)
             check(xLen >= yLen)
-            var borrow = 0uL // 0 or 1
-            var i = 0
-            while (i < yLen) {
-                borrow = dw32(x[i]) - dw32(y[i]) - borrow
-                x[i] = borrow.toInt()
-                borrow = borrow shr 63
-                ++i
-            }
-            while (borrow != 0uL && i < xLen) {
-                borrow = dw32(x[i]) - borrow
-                x[i] = borrow.toInt()
-                borrow = borrow shr 63
-                ++i
-            }
-            check(borrow == 0uL)
-        } else {
-            throw IllegalArgumentException()
+            return setSub(x, x, xLen, y, yLen)
         }
+        throw IllegalArgumentException()
     }
 
     /**
