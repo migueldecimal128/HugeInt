@@ -7,14 +7,14 @@ import java.util.Random
 
 class TestMagia {
 
-    val verbose = false
+    val verbose = true
 
     val random = Random()
 
-    fun randBi() : BigInteger {
-        val bitLength = random.nextInt(0, 1024)
-        val bi = BigInteger(bitLength, random)
-        return bi
+    fun randJbi(maxBitLen: Int = 1024) : BigInteger {
+        val bitLength = random.nextInt(0, maxBitLen)
+        val jbi = BigInteger(bitLength, random)
+        return jbi
     }
 
     @Test
@@ -26,21 +26,27 @@ class TestMagia {
     }
 
     @Test
+    fun testProblem2() {
+        val jbi = randJbi(1000)
+        testRoundTripShift(jbi)
+    }
+
+    @Test
     fun testRoundTrip() {
         for (i in 0..1000) {
-            val bi = randBi()
-            testBitLen(bi)
-            testRoundTripBi(bi)
-            testRoundTripStr(bi.toString())
-            testRoundTripShift(bi)
+            val jbi = randJbi()
+            testBitLen(jbi)
+            testRoundTripBi(jbi)
+            testRoundTripStr(jbi.toString())
+            testRoundTripShift(jbi)
         }
     }
 
 
-    fun testRoundTripBi(bi: BigInteger) {
-        val car = MagiaTransducer.magiaFromBi(bi)
-        val bi2 = MagiaTransducer.magiaToBi(car)
-        Assertions.assertEquals(bi, bi2)
+    fun testRoundTripBi(jbi: BigInteger) {
+        val car = MagiaTransducer.magiaFromBi(jbi)
+        val jbi2 = MagiaTransducer.magiaToBi(car)
+        Assertions.assertEquals(jbi, jbi2)
     }
 
     fun testRoundTripStr(str: String) {
@@ -57,98 +63,98 @@ class TestMagia {
         Assertions.assertEquals(str, str3)
     }
 
-    fun testRoundTripShift(bi: BigInteger) {
+    fun testRoundTripShift(jbi: BigInteger) {
         val shift = random.nextInt(100)
-        val magia = MagiaTransducer.magiaFromBi(bi)
+        val magia = MagiaTransducer.magiaFromBi(jbi)
 
-        val biLeft = bi.shiftLeft(shift)
+        val jbiLeft = jbi.shiftLeft(shift)
         val carLeft = Magia.newShiftLeft(magia, shift)
-        assert(MagiaTransducer.EQ(carLeft, biLeft))
+        assert(MagiaTransducer.EQ(carLeft, jbiLeft))
 
         Magia.mutateShiftRight(carLeft, carLeft.size, shift)
-        assert(MagiaTransducer.EQ(carLeft, bi))
+        assert(MagiaTransducer.EQ(carLeft, jbi))
 
-        val biRight = bi.shiftRight(shift)
+        val jbiRight = jbi.shiftRight(shift)
         Magia.mutateShiftRight(magia, magia.size, shift)
-        assert(MagiaTransducer.EQ(magia, biRight))
+        assert(MagiaTransducer.EQ(magia, jbiRight))
     }
 
-    fun testBitLen(bi: BigInteger) {
-        val car = MagiaTransducer.magiaFromBi(bi)
-        val bitLen = Magia.bitLen(car)
-        Assertions.assertEquals(bi.bitLength(), bitLen)
+    fun testBitLen(jbi: BigInteger) {
+        val magia = MagiaTransducer.magiaFromBi(jbi)
+        val bitLen = Magia.bitLen(magia)
+        Assertions.assertEquals(jbi.bitLength(), bitLen)
     }
 
     @Test
     fun testArithmetic() {
         for (i in 0..<1000) {
-            val biA = randBi()
-            testAdd(biA, biA)
-            testSub(biA, biA)
-            testMul(biA, biA)
-            testDiv(biA, biA)
+            val jjbiA = randJbi()
+            testAdd(jjbiA, jjbiA)
+            testSub(jjbiA, jjbiA)
+            testMul(jjbiA, jjbiA)
+            testDiv(jjbiA, jjbiA)
 
-            val biB = randBi()
-            testAdd(biA, biB)
-            testSub(biA, biB)
-            testMul(biA, biB)
-            testDiv(biA, biB)
+            val jjbiB = randJbi()
+            testAdd(jjbiA, jjbiB)
+            testSub(jjbiA, jjbiB)
+            testMul(jjbiA, jjbiB)
+            testDiv(jjbiA, jjbiB)
 
-            val biC = biA.add(BigInteger.ONE)
-            testAdd(biA, biC)
-            testSub(biA, biC)
-            testMul(biA, biC)
-            testDiv(biA, biC)
+            val jbiC = jjbiA.add(BigInteger.ONE)
+            testAdd(jjbiA, jbiC)
+            testSub(jjbiA, jbiC)
+            testMul(jjbiA, jbiC)
+            testDiv(jjbiA, jbiC)
 
         }
     }
 
-    fun testAdd(biA: BigInteger, biB: BigInteger) {
-        val carA = MagiaTransducer.magiaFromBi(biA)
-        val carB = MagiaTransducer.magiaFromBi(biB)
-        val carSum = Magia.newAdd(carA, carB)
+    fun testAdd(jjbiA: BigInteger, jjbiB: BigInteger) {
+        val magiaA = MagiaTransducer.magiaFromBi(jjbiA)
+        val magiaB = MagiaTransducer.magiaFromBi(jjbiB)
+        val magiaSum = Magia.newAdd(magiaA, magiaB)
 
-        val biSum = biA.add(biB)
+        val jbiSum = jjbiA.add(jjbiB)
 
-        assert(MagiaTransducer.EQ(carSum, biSum))
+        assert(MagiaTransducer.EQ(magiaSum, jbiSum))
     }
 
-    fun testSub(biA: BigInteger, biB: BigInteger) {
-        var biX = biA
-        var biY = biB
-        if (biA < biB) {
-            biX = biB
-            biY = biA
+    fun testSub(jjbiA: BigInteger, jjbiB: BigInteger) {
+        var jbiX = jjbiA
+        var jbiY = jjbiB
+        if (jjbiA < jjbiB) {
+            jbiX = jjbiB
+            jbiY = jjbiA
         }
-        val carX = MagiaTransducer.magiaFromBi(biX)
-        val carY = MagiaTransducer.magiaFromBi(biY)
-        val magiaDiff = Magia.newSub(carX, carY)
+        val magiaX = MagiaTransducer.magiaFromBi(jbiX)
+        val magiaY = MagiaTransducer.magiaFromBi(jbiY)
+        val magiaDiff = Magia.newSub(magiaX, magiaY)
 
-        val biDiff = biX.subtract(biY)
+        val jbiDiff = jbiX.subtract(jbiY)
 
-        assert(MagiaTransducer.EQ(magiaDiff, biDiff))
+        assert(MagiaTransducer.EQ(magiaDiff, jbiDiff))
     }
 
-    fun testMul(biA: BigInteger, biB: BigInteger) {
-        val carA = MagiaTransducer.magiaFromBi(biA)
-        val carB = MagiaTransducer.magiaFromBi(biB)
-        val carProd = Magia.newMul(carA, carB)
+    fun testMul(jbiA: BigInteger, jbiB: BigInteger) {
+        val magiaA = MagiaTransducer.magiaFromBi(jbiA)
+        val magiaB = MagiaTransducer.magiaFromBi(jbiB)
+        val magiaProd = Magia.newMul(magiaA, magiaB)
 
-        val biProd = biA.multiply(biB)
+        val jbiProd = jbiA.multiply(jbiB)
 
-        assert(MagiaTransducer.EQ(carProd, biProd))
+        assert(MagiaTransducer.EQ(magiaProd, jbiProd))
     }
 
-    fun testDiv(biA: BigInteger, biB: BigInteger) {
-        if (biB.signum() == 0)
+    fun testDiv(jbiA: BigInteger, jbiB: BigInteger) {
+        if (jbiB.signum() == 0)
             return
-        val carA = MagiaTransducer.magiaFromBi(biA)
-        val carB = MagiaTransducer.magiaFromBi(biB)
-        val carQuot = Magia.newDiv(carA, carB)
+        val magiaA = MagiaTransducer.magiaFromBi(jbiA)
+        val magiaB = MagiaTransducer.magiaFromBi(jbiB)
+        val magiaQuot = Magia.newDiv(magiaA, magiaB)
 
-        val biQuot = biA.divide(biB)
+        val jbiQuot = jbiA.divide(jbiB)
 
-        assert(MagiaTransducer.EQ(carQuot, biQuot))
+        assert(MagiaTransducer.EQ(magiaQuot, jbiQuot))
     }
 
 }

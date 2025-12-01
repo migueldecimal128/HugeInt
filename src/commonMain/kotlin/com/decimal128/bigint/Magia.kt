@@ -968,9 +968,12 @@ object Magia {
         }
     }
 
-    private fun copy(dst: IntArray, src: IntArray) {
+    private fun copy(dst: IntArray, src: IntArray) = copy(dst, src, src.size)
+
+    private fun copy(dst: IntArray, src: IntArray, srcLen: Int) {
+        check (srcLen >= 0 && srcLen <= src.size)
         var i = 0
-        val m = min(dst.size, src.size)
+        val m = min(dst.size, srcLen)
         while (i < m) {
             dst[i] = src[i]
             ++i
@@ -992,26 +995,13 @@ object Magia {
      */
     fun newShiftRight(x: IntArray, bitCount: Int): IntArray {
         require(bitCount >= 0)
-        val newBitLen = bitLen(x) - bitCount
+        val xLen = nonZeroLimbLen(x)
+        val newBitLen = bitLen(x, xLen) - bitCount
         if (newBitLen <= 0)
             return ZERO
-        val wordShift = bitCount ushr 5
-        val innerShift = bitCount and ((1 shl 5) - 1)
         val z = newWithBitLen(newBitLen)
-        if (innerShift != 0) {
-            val iLast = z.size - 1
-            for (i in 0..<iLast)
-                z[i] = (x[i + wordShift + 1] shl -innerShift) or (x[i + wordShift] ushr innerShift)
-            val srcIndex = iLast + wordShift + 1
-            z[iLast] = (
-                    if (srcIndex < x.size)
-                        (x[iLast + wordShift + 1] shl -innerShift)
-                    else
-                        0) or (x[iLast + wordShift] ushr innerShift)
-        } else {
-            for (i in z.indices)
-                z[i] = x[i + wordShift]
-        }
+        val zLen = setShiftRight(z, x, xLen, bitCount)
+        check (zLen == z.size)
         return z
     }
 
@@ -1025,28 +1015,55 @@ object Magia {
      */
     fun mutateShiftRight(x: IntArray, xLen: Int, bitCount: Int): IntArray {
         require (bitCount >= 0 && xLen >= 0 && xLen <= x.size)
-        val wordShift = bitCount ushr 5
-        val innerShift = bitCount and ((1 shl 5) - 1)
-        if (wordShift >= xLen) {
-            x.fill(0, 0, xLen)
-            return x
-        }
-        val newLen = xLen - wordShift
-        if (wordShift > 0) {
-            //System.arraycopy(x, wordShift, x, 0, newLen)
-            //shiftDown(x, wordShift, 0, newLen)
-            for (i in 0..<newLen)
-                x[i] = x[i + wordShift]
-            for (i in newLen..<xLen)
+        if (xLen > 0 && bitCount > 0) {
+            val shiftedLen = setShiftRight(x, x, xLen, bitCount)
+            check (shiftedLen <= xLen)
+            for (i in shiftedLen..<xLen)
                 x[i] = 0
         }
-        if (innerShift > 0) {
-            val last = newLen - 1
-            for (i in 0..<last)
-                x[i] = (x[i + 1] shl (32-innerShift)) or (x[i] ushr innerShift)
-            x[last] = x[last] ushr innerShift
-        }
         return x
+    }
+
+    /**
+     * Shifts the first [xLen] limbs of [x] right by [bitCount] bits, storing
+     * the results in z.
+     *
+     * This will successfully operate mutate in-place, where z === x
+     *
+     * Bits shifted out of the low end are discarded.
+     * returns the number of limbs used in z.
+     *
+     * @throws IllegalArgumentException if [xLen] or [bitCount] is out of range.
+     */
+    fun setShiftRight(z: IntArray, x: IntArray, xLen: Int, bitCount: Int): Int {
+        require(bitCount >= 0 && xLen >= 0 && xLen <= x.size)
+        val xLenNormalized = nonZeroLimbLen(x, xLen)
+        if (xLenNormalized == 0)
+            return 0
+        require(x[xLenNormalized - 1] != 0)
+        val newBitLen = bitLen(x, xLenNormalized) - bitCount
+        if (newBitLen <= 0)
+            return 0
+        val zLen = (newBitLen + 0x1F) ushr 5
+        require (zLen <= z.size)
+        val wordShift = bitCount ushr 5
+        val innerShift = bitCount and ((1 shl 5) - 1)
+        if (innerShift != 0) {
+            val iLast = zLen - 1
+            for (i in 0..<iLast)
+                z[i] = (x[i + wordShift + 1] shl -innerShift) or (x[i + wordShift] ushr innerShift)
+            val srcIndex = iLast + wordShift + 1
+            z[iLast] = (
+                    if (srcIndex < xLen)
+                        (x[iLast + wordShift + 1] shl (32 - innerShift))
+                    else
+                        0) or
+                    (x[iLast + wordShift] ushr innerShift)
+        } else {
+            for (i in 0..<zLen)
+                z[i] = x[i + wordShift]
+        }
+        return zLen
     }
 
     /**
@@ -1809,8 +1826,9 @@ object Magia {
         knuthDivideNormalizedCore(q, un, vn, m, n)
 
         if (r != null) {
-            mutateShiftRight(un, un.size, shift)
-            copy(r, un)
+            val unLen = nonZeroLimbLen(un)
+            mutateShiftRight(un, unLen, shift)
+            copy(r, un, unLen)
         }
     }
 
