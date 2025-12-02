@@ -7,7 +7,7 @@ import java.util.Random
 
 class TestMagia {
 
-    val verbose = true
+    val verbose = false
 
     val random = Random()
 

@@ -124,13 +124,7 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
          * @param l the signed 64-bit integer to convert.
          * @return the corresponding [BigInt] representation.
          */
-        fun from(l: Long) = when {
-            (l > 0L) && (l shr 32) == 0L -> BigInt(POSITIVE, intArrayOf(l.toInt()))
-            l > 0L -> BigInt(POSITIVE, intArrayOf(l.toInt(), (l ushr 32).toInt()))
-            l < 0L && (l shr 32) == -1L -> BigInt(NEGATIVE, intArrayOf(-l.toInt()))
-            l < 0L -> BigInt(NEGATIVE, intArrayOf(-l.toInt(), (-l ushr 32).toInt()))
-            else -> ZERO
-        }
+        fun from(l: Long) = from (l < 0, (l.absoluteValue).toULong())
 
         /**
          * Converts a 64-bit *unsigned* value, stored in a signed [Long] primitive,
@@ -139,7 +133,7 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
          * @param l the unsigned 64-bit value (stored in a [Long]) to convert.
          * @return a non-negative [BigInt] equivalent to `l.toULong()`.
          */
-        fun fromUnsigned(l: Long) = from(l.toULong())
+        fun fromUnsigned(l: Long) = from(false, l.toULong())
 
         /**
          * Converts a 64-bit unsigned [ULong] into a non-negative [BigInt].
@@ -150,10 +144,46 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
          * @param dw the unsigned long integer to convert.
          * @return the corresponding non-negative [BigInt].
          */
-        fun from(dw: ULong) = when {
-            dw == 0uL -> ZERO
-            (dw shr 32) == 0uL -> BigInt(POSITIVE, intArrayOf(dw.toInt()))
-            else -> BigInt(POSITIVE, intArrayOf(dw.toInt(), (dw shr 32).toInt()))
+        fun from(dw: ULong) = from(false, dw)
+
+        fun from(sign: Boolean, dwMagnitude: ULong) = when {
+            dwMagnitude == 0uL -> ZERO
+            (dwMagnitude shr 32) == 0uL -> BigInt(Sign(sign), intArrayOf(dwMagnitude.toInt()))
+            else -> BigInt(Sign(sign), intArrayOf(dwMagnitude.toInt(), (dwMagnitude shr 32).toInt()))
+        }
+
+        /**
+         * Converts this `Double` to a `BigInt`.
+         *
+         * The conversion is purely numeric: the fractional part is truncated toward zero
+         * and the exponent is fully expanded into an integer value.
+         *
+         * Special cases:
+         *  * `NaN`, `+∞`, and `-∞` are converted to `BigInt.ZERO`
+         *  * `+0.0` and `-0.0` both return `BigInt.ZERO`
+         *
+         * Example:
+         *  `6.02214076E23` becomes `602214076000000000000000`.
+         */
+        fun from(dbl: Double): BigInt {
+            // 1 + 12 + 52 == 64
+            val longBits = dbl.toBits()
+            val sign = longBits < 0
+            val signMask = longBits shr 63
+            val biasedExp = ((longBits ushr 52) and 0x7FF).toInt()
+            val exp = biasedExp - 1023
+            if (exp < 0 || // +0, -0, fractional amounts
+                biasedExp == 0x7FF) // fractional values + NaN + Infinity ... sorry
+                return ZERO
+            // we are left with finiteNonZero
+            val significand53 = (longBits and ((1L shl 52) - 1L)) or (1L shl 52)
+            val shift = exp - 52
+            if (shift <= 0) {
+                val magnitude = significand53 ushr -shift
+                val l = (magnitude xor signMask) - signMask
+                return from(l)
+            }
+            return fromULongShiftLeft(significand53.toULong(), shift, sign)
         }
 
         /**
@@ -864,6 +894,52 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
             bitIndex == 0 -> withBitMask(bitWidth)
             bitWidth == 1 -> withSetBit(bitIndex)
             else -> ZERO
+        }
+
+        fun fromULongShiftLeft(dw: ULong, shiftLeftCount: Int, sign: Boolean = false): BigInt {
+            if (shiftLeftCount >= 0) {
+                val dwBitLen = 64 - dw.countLeadingZeroBits()
+                return when {
+                    shiftLeftCount == 0 -> from(sign, dw)
+                    dwBitLen == 0 -> ZERO
+                    dwBitLen == 1 -> withSetBit(shiftLeftCount)
+                    else -> {
+                        val totalBitLen = dwBitLen + shiftLeftCount
+                        val magia = Magia.newWithBitLen(totalBitLen)
+                        val innerShift = shiftLeftCount and 0x1F
+                        val lo = (dw shl innerShift).toInt()
+                        if (innerShift == 0) {
+                            val hi0 = (dw shr 32).toInt()
+                            if (hi0 == 0) {
+                                magia[magia.size - 1] = lo
+                            } else {
+                                magia[magia.size - 1] = hi0
+                                magia[magia.size - 2] = lo
+                            }
+                        } else {
+                            val mid = (dw shr (32 - innerShift)).toInt()
+                            val hi = (dw shr (64 - innerShift)).toInt()
+                            when {
+                                hi != 0 -> {
+                                    magia[magia.size - 1] = hi
+                                    magia[magia.size - 2] = mid
+                                    magia[magia.size - 3] = lo
+                                }
+
+                                mid != 0 -> {
+                                    magia[magia.size - 1] = mid
+                                    magia[magia.size - 2] = lo
+
+                                }
+
+                                else -> magia[magia.size - 1] = lo
+                            }
+                        }
+                        BigInt(Sign(sign), magia)
+                    }
+                }
+            }
+            throw IllegalArgumentException()
         }
 
         fun factorial(n: Int): BigInt {
@@ -2614,6 +2690,21 @@ fun Long.toBigInt() = BigInt.from(this)
 
 /** Converts this `ULong` to a `BigInt`. */
 fun ULong.toBigInt() = BigInt.from(this)
+
+/**
+ * Converts this `Double` to a `BigInt`.
+ *
+ * The conversion is purely numeric: the fractional part is truncated toward zero
+ * and the exponent is fully expanded into an integer value.
+ *
+ * Special cases:
+ *  * `NaN`, `+∞`, and `-∞` are converted to `BigInt.ZERO`
+ *  * `+0.0` and `-0.0` both return `BigInt.ZERO`
+ *
+ * Example:
+ *  `6.02214076E23` becomes `602214076000000000000000`.
+ */
+fun Double.toBigInt() = BigInt.from(this)
 
 /** Parses this string as a `BigInt` using `BigInt.from(this)`. */
 fun String.toBigInt() = BigInt.from(this)
