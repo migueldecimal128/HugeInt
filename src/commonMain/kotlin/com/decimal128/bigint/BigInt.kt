@@ -10,6 +10,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.math.ceil
+import kotlin.math.max
 import kotlin.random.Random
 
 /**
@@ -428,37 +429,54 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
         }
 
         /**
-         * Generates a random `BigInt` with the specified bit length.
+         * Generates a random `BigInt` whose magnitude is uniformly sampled from
+         * the range `0 .. (2^maxBitLen - 1)`.
          *
-         * The magnitude is sampled uniformly from the range
-         * `0 .. (2^bitLen - 1)`. Each bit position in the magnitude is set
-         * independently with probability 0.5, so the actual bit length of the
-         * result may be smaller than `bitLen` if the most significant bits
-         * happen to be zero.
+         * ## Magnitude distribution
+         * Each limb is filled with uniformly random bits. For the highest limb,
+         * only the lowest `maxBitLen mod 32` bits are used; if `maxBitLen` is a
+         * multiple of 32, all 32 bits of the top limb are random.
          *
-         * When `withRandomSign == false` (the default), the result is always
-         * non-negative. When `withRandomSign == true`, a random sign is applied
-         * to non-zero magnitudes with equal probability for positive and
-         * negative. Zero is always returned as the unique `BigInt.ZERO`, so
-         * zero occurs with **twice** the probability of any particular non-zero
-         * value.
+         * This produces a magnitude `m` satisfying:
          *
-         * @param bitLen the number of bits to sample; must be >= 0.
-         * @param rng the random number generator used for the magnitude and,
-         *            when `withRandomSign` is true, for the sign.
-         * @param withRandomSign if `true`, assigns a random sign to non-zero
-         *                       values; otherwise the result is always
-         *                       non-negative.
+         *     0 ≤ m < 2^maxBitLen
+         *
+         * The actual bit length of the result may be **less than** `maxBitLen`
+         * if leading bits happen to be zero. In fact, every bit position is
+         * independently set with probability `1/2`.
+         *
+         * ## Sign handling
+         * When `withRandomSign == false` (default), the result is always
+         * non-negative.
+         *
+         * When `withRandomSign == true`, the sign of any **non-zero** result is
+         * chosen uniformly from `{ +, – }`. Zero is always returned as the
+         * canonical `BigInt.ZERO`, so zero occurs with **twice the probability**
+         * of any particular non-zero magnitude.
+         *
+         * ## Parameters
+         * @param maxBitLen the maximum number of bits in the generated magnitude;
+         *                  must be ≥ 0.
+         * @param rng the random number generator used for both magnitude and sign.
+         * @param withRandomSign if `true`, allows a random sign for non-zero values;
+         *                       otherwise the result is always non-negative.
+         *
+         * ## Returns
+         * A uniformly random `BigInt` in the range `[−(2^maxBitLen−1), +(2^maxBitLen−1)]`
+         * when `withRandomSign == true`, and in the range `[0, 2^maxBitLen)` otherwise.
+         *
+         * @throws IllegalArgumentException if `maxBitLen < 0`.
          */
-        fun fromRandom(
-            bitLen: Int,
+        fun randomWithMaxBitLen(
+            maxBitLen: Int,
             rng: Random = Random.Default,
             withRandomSign: Boolean = false
         ): BigInt {
-            if (bitLen > 0) {
+            if (maxBitLen > 0) {
                 var zeroTest = 0
-                val magia = Magia.newWithBitLen(bitLen)
-                var mask = (if ((bitLen and 0x1F) == 0) 0 else 1 shl (bitLen and 0x1F)) - 1
+                val magia = Magia.newWithBitLen(maxBitLen)
+                val topBits = maxBitLen and 0x1F
+                var mask = (if (topBits == 0) 0 else (1 shl topBits)) - 1
                 for (i in magia.lastIndex downTo 0) {
                     val rand = rng.nextInt() and mask
                     magia[i] = rand
@@ -471,9 +489,144 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
                     else -> BigInt(Sign(rng.nextInt() shr 31), magia)
                 }
             }
-            if (bitLen == 0)
+            if (maxBitLen == 0)
                 return ZERO
             throw IllegalArgumentException("bitLen must be > 0")
+        }
+
+        /**
+         * Generates a random `BigInt` with **exactly** the specified bit length.
+         *
+         * The magnitude is sampled uniformly from the range:
+         *
+         *     2^(bitLen - 1) ≤ m < 2^bitLen
+         *
+         * The most significant bit (bit `bitLen - 1`) is always set, ensuring that the
+         * result has *exactly* `bitLen` bits. All lower bits are chosen independently
+         * with probability 0.5, so the distribution over valid magnitudes is uniform.
+         *
+         * ## Sign handling
+         * When `withRandomSign == false` (default), the result is always non-negative.
+         *
+         * When `withRandomSign == true`, the sign of the result is chosen uniformly
+         * from `{ +, – }`. Zero is never produced, because the magnitude is strictly
+         * positive for all `bitLen > 0`.
+         *
+         * ## Parameters
+         * @param bitLen the exact bit length of the generated magnitude; must be ≥ 0.
+         * @param rng the random number generator used for both magnitude and sign.
+         * @param withRandomSign if `true`, assigns a random sign; otherwise the result
+         *                       is always non-negative.
+         *
+         * ## Returns
+         * A `BigInt` whose magnitude has exactly `bitLen` bits (or zero if `bitLen == 0`).
+         *
+         * @throws IllegalArgumentException if `bitLen < 0`.
+         */
+        fun randomWithBitLen(
+            bitLen: Int,
+            rng: Random = Random.Default,
+            withRandomSign: Boolean = false
+        ): BigInt {
+            if (bitLen > 0) {
+                var zeroTest = 0
+                val magia = Magia.newWithBitLen(bitLen)
+                val topBits = bitLen and 0x1F
+                var mask = (if (topBits == 0) 0 else (1 shl topBits)) - 1
+                for (i in magia.lastIndex downTo 0) {
+                    val rand = rng.nextInt() and mask
+                    magia[i] = rand
+                    zeroTest = zeroTest or rand
+                    mask = -1
+                }
+                val topBitIndex = bitLen - 1
+                val limbIndex = topBitIndex ushr 5
+                check (limbIndex == magia.size - 1)
+                magia[limbIndex] = magia[limbIndex] or (1 shl (topBitIndex and 0x1F))
+                return if (!withRandomSign)
+                    BigInt(POSITIVE, magia)
+                else
+                    BigInt(Sign(rng.nextInt() shr 31), magia)
+            }
+            if (bitLen == 0)
+                return ZERO
+            throw IllegalArgumentException("bitLen must be >= 0")
+        }
+
+        /**
+         * Generates a random `BigInt` whose bit length is chosen uniformly from the
+         * range `0 .. maxBitLen`.
+         *
+         * First, a bit length `L` is drawn uniformly from:
+         *
+         *     L ∈ { 0, 1, 2, …, maxBitLen }
+         *
+         * Then a random magnitude is generated exactly as in
+         * [`randomWithMaxBitLen(L, rng, withRandomSign)`], producing a uniformly
+         * random value in the range:
+         *
+         *     0 ≤ m < 2^L
+         *
+         * This yields a **log-uniform** distribution over magnitudes: smaller values
+         * occur more frequently than larger values, with each possible bit length
+         * equally likely.
+         *
+         * ## Sign handling
+         * When `withRandomSign == false` (default), the result is always non-negative.
+         *
+         * When `withRandomSign == true`, the sign of any non-zero result is chosen
+         * uniformly from `{ +, – }`. Zero is always returned as the canonical
+         * `BigInt.ZERO`, so its probability reflects the chance that `L == 0` or that
+         * a sampled magnitude happens to be zero.
+         *
+         * ## Parameters
+         * @param maxBitLen the maximum possible bit length; must be ≥ 0.
+         * @param rng the random number generator used for both bit-length selection
+         *            and magnitude generation.
+         * @param withRandomSign if `true`, assigns a random sign to non-zero values;
+         *                       otherwise the result is always non-negative.
+         *
+         * ## Returns
+         * A random `BigInt` whose bit length is uniformly chosen in
+         * `0 .. maxBitLen`, and whose magnitude is uniformly distributed within
+         * the corresponding power-of-two range.
+         *
+         * @throws IllegalArgumentException if `maxBitLen < 0`.
+         */
+        fun randomWithRandomBitLen(
+            maxBitLen: Int,
+            rng: Random = Random.Default,
+            withRandomSign: Boolean = false
+        ): BigInt = randomWithMaxBitLen(rng.nextInt(maxBitLen + 1), rng, withRandomSign)
+
+        /**
+         * Generates a random `BigInt` uniformly distributed in the range `0 .. max-1`.
+         *
+         * The function repeatedly samples random values `x` from
+         * `0 .. (2^bitLen - 1)`, where `bitLen = max.magnitudeBitLen()`, until a
+         * value satisfying `x < max` is obtained. This yields a uniform distribution
+         * over the interval `[0, max)`.
+         *
+         * The sign of the result is always non-negative.
+         *
+         * ## Parameters
+         * @param max the exclusive upper bound; must be > 0.
+         * @param rnd the random number generator.
+         *
+         * ## Returns
+         * A uniformly random `BigInt` `x` satisfying `0 ≤ x < max`.
+         *
+         * @throws IllegalArgumentException if `max ≤ 0`.
+         */
+        fun randomBelow(max: BigInt, rnd: Random = Random.Default): BigInt {
+            require(max > BigInt.ZERO) {
+                "max must be > 0 for randomBelow(max)"
+            }
+            val bitLen = max.magnitudeBitLen()
+            while (true) {
+                val x = randomWithMaxBitLen(bitLen, rnd)
+                if (x < max) return x
+            }
         }
 
         /**
@@ -505,7 +658,7 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
          *         `[bitLenMin .. bitLenMax]`.
          * @throws IllegalArgumentException if `bitLenMin <= 0` or `bitLenMax < bitLenMin`.
          */
-        fun fromRandom(
+        fun randomWithMaxBitLen(
             bitLenMin: Int,
             bitLenMax: Int,
             rng: Random = Random.Default,
@@ -515,7 +668,7 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
             if (bitLenMin < 0 || range < 0)
                 throw IllegalArgumentException("invalid bitLen range: 0 <= bitLenMin <= bitLenMax")
             val bitLen = bitLenMin + rng.nextInt(range + 1)
-            return fromRandom(bitLen, rng, withRandomSign)
+            return randomWithMaxBitLen(bitLen, rng, withRandomSign)
         }
 
         /**
@@ -642,6 +795,8 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
                 return ONE
             val magia = Magia.newWithBitLen(bitIndex + 1)
             magia[magia.lastIndex] = 1 shl (bitIndex and 0x1F)
+            val magia2 = Magia.newWithSetBit(bitIndex)
+            check (Magia.EQ(magia, magia2))
             return BigInt(POSITIVE, magia)
         }
 
@@ -1378,7 +1533,7 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
             else -> {
                 val maxBitLen = Magia.bitLen(this.magia) * n
                 val maxBitLimbLen = (maxBitLen + 0x1F) ushr 5
-                var baseMag = Magia.newCopyWithExactLen(this.magia, maxBitLimbLen)
+                var baseMag = Magia.newCopyWithExactLimbLen(this.magia, maxBitLimbLen)
                 var baseLen = Magia.nonZeroLimbLen(this.magia)
                 var resultMag = IntArray(maxBitLimbLen)
                 resultMag[0] = 1
@@ -1589,6 +1744,19 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
      * @return true if the bit is set, false otherwise
      */
     fun isBitSet(bitIndex: Int): Boolean = Magia.testBit(this.magia, bitIndex)
+
+    fun setBit(bitIndex: Int): BigInt {
+        if (bitIndex >= 0) {
+            if (isBitSet(bitIndex))
+                return this
+            val newBitLen = max(bitIndex + 1, Magia.bitLen(this.magia))
+            val magia = Magia.newCopyWithExactBitLen(this.magia, newBitLen)
+            val wordIndex = bitIndex ushr 5
+            magia[wordIndex] = magia[wordIndex] or (1 shl (bitIndex and 0x1F))
+            return BigInt(this.sign, magia)
+        }
+        throw IllegalArgumentException()
+    }
 
     /**
      * Returns the index of the rightmost set bit (number of trailing zeros).
@@ -2467,6 +2635,6 @@ fun CharArray.toBigInt() = BigInt.from(this)
  * @throws IllegalArgumentException if [bitCount] is negative.
  */
 fun Random.nextBigInt(bitCount: Int, withRandomSign: Boolean = false) =
-    BigInt.fromRandom(bitCount, this, withRandomSign)
+    BigInt.randomWithMaxBitLen(bitCount, this, withRandomSign)
 
 

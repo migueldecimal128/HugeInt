@@ -19,7 +19,7 @@ class TestISqrt {
     }
 
     fun testSqrtUp(bitLen: Int) {
-        val hi = BigInt.fromRandom(bitLen)
+        val hi = BigInt.randomWithMaxBitLen(bitLen)
         if (verbose)
             println("testSqrUp hi:$hi")
         val hi2 = hi.sqr()
@@ -44,7 +44,7 @@ class TestISqrt {
     }
 
     fun testSqrtDown(bitLen: Int) {
-        val hi = BigInt.fromRandom(bitLen)
+        val hi = BigInt.randomWithMaxBitLen(bitLen)
         if (verbose)
             println("testSqrtDown hi:$hi")
         val isqrt = hi.isqrt()

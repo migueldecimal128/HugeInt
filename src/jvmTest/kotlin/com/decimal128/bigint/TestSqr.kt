@@ -42,7 +42,7 @@ class TestSqr {
     val rng = Random.Default
 
     fun randomHi(hiBitLen: Int): BigInt {
-        val rand = BigInt.fromRandom(rng.nextInt(hiBitLen), rng)
+        val rand = BigInt.randomWithMaxBitLen(rng.nextInt(hiBitLen), rng)
         return if (rng.nextBoolean()) rand.negate() else rand
     }
 

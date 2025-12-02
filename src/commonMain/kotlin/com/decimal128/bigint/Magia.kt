@@ -267,7 +267,10 @@ object Magia {
         }
     }
 
-    fun newCopyWithExactLen(src: IntArray, exactLimbLen: Int): IntArray {
+    fun newCopyWithExactBitLen(src: IntArray, exactBitLen: Int): IntArray =
+        newCopyWithExactLimbLen(src, (exactBitLen + 0x1F) ushr 5)
+
+    fun newCopyWithExactLimbLen(src: IntArray, exactLimbLen: Int): IntArray {
         if (exactLimbLen in 1..MAX_ALLOC_SIZE) {
             val dst = IntArray(exactLimbLen)
             //System.arraycopy(src, 0, dst, 0, min(src.size, dst.size))
@@ -372,7 +375,7 @@ object Magia {
         val carry = mutateAdd(x, x.size, w)
         if (carry == 0u)
             return x
-        val z = newCopyWithExactLen(x, x.size + 1)
+        val z = newCopyWithExactLimbLen(x, x.size + 1)
         z[x.size] = carry.toInt()
         return z
     }
@@ -589,7 +592,12 @@ object Magia {
     }
 
     fun setSub(z: IntArray, x: IntArray, xLen: Int, y: IntArray, yLen: Int): Int {
-        require (xLen >= 0 && xLen <= x.size && xLen <= z.size && yLen >= 0 && yLen <= y.size)
+        require (xLen >= 0 && xLen <= x.size)
+        //if (xLen > z.size)
+        //    println("kilroy was here!")
+        //require (xLen <= z.size)
+        require (yLen >= 0 && yLen <= y.size)
+        require (xLen >= 0 && xLen <= x.size && yLen >= 0 && yLen <= y.size)
         val xLen2 = nonZeroLimbLen(x, xLen)
         val yLen2 = nonZeroLimbLen(y, yLen)
         check (compare(x, xLen2, y, yLen2) >= 0)
@@ -825,6 +833,8 @@ object Magia {
             val lastIndex = min(xLen + yLen, p.size) - 1
             check (p[lastIndex] != 0 || p[lastIndex - 1] != 0)
             return lastIndex + (if (p[lastIndex] == 0) 0 else 1)
+        } else if (xLen == 0 || yLen == 0) {
+            return 0
         } else {
             throw IllegalArgumentException()
         }
@@ -1558,14 +1568,13 @@ object Magia {
      * @return -1 if x < y, 0 if x == y, 1 if x > y.
      */
     fun compare(x: IntArray, y: IntArray): Int {
-        val minLen = min(x.size, y.size)
-        for (i in x.size - 1 downTo minLen)
-            if (x[i] != 0)
-                return 1
-        for (i in y.size - 1 downTo minLen)
-            if (y[i] != 0)
-                return -1
-        for (i in minLen - 1 downTo 0) {
+        val xLen = nonZeroLimbLen(x)
+        val yLen = nonZeroLimbLen(y)
+        if (xLen > yLen)
+            return 1
+        if (xLen < yLen)
+            return -1
+        for (i in xLen - 1 downTo 0) {
             if (x[i] != y[i])
                 return (((dw32(x[i]) - dw32(y[i])).toLong() shr 63) shl 1).toInt() + 1
         }
@@ -1816,8 +1825,8 @@ object Magia {
             throw IllegalArgumentException()
 
         // Step D1: Normalize
-        val un = newCopyWithExactLen(u, m + 1)
-        val vn = newCopyWithExactLen(v, n)
+        val un = newCopyWithExactLimbLen(u, m + 1)
+        val vn = newCopyWithExactLimbLen(v, n)
         val shift = vn[n - 1].countLeadingZeroBits()
         if (shift > 0) {
             mutateShiftLeft(vn, shift)
@@ -1988,7 +1997,7 @@ object Magia {
             val maxSignedLen = maxDigitLenFromBitLen(bitLen) + if (isNegative) 1 else 0
             val utf8 = ByteArray(maxSignedLen)
             val limbLen = nonZeroLimbLen(x, xLen)
-            val t = newCopyWithExactLen(x, limbLen)
+            val t = newCopyWithExactLimbLen(x, limbLen)
             val len = destructiveToUtf8BeforeIndex(utf8, utf8.size, isNegative, t, limbLen)
             val startingIndex = utf8.size - len
             check (startingIndex <= 1)
@@ -2939,7 +2948,7 @@ object Magia {
             uLen = shiftedLimbLen
             mutateShiftLeft(u, uLen, initialShift)
         }
-        return newCopyWithExactLen(u, uLen)
+        return newCopyWithExactLimbLen(u, uLen)
     }
 
 }

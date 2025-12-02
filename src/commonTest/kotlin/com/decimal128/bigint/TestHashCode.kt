@@ -26,7 +26,7 @@ class TestHashCode {
     @Test
     fun testPosNegHash() {
         repeat(1000) {
-            val hiPos = BigInt.fromRandom(bitLen = rng.nextInt(10))
+            val hiPos = BigInt.randomWithMaxBitLen(maxBitLen = rng.nextInt(10))
             if (verbose)
                 println("hiPos:$hiPos")
             // hiNeg will not be negative in the case of zero
@@ -50,7 +50,7 @@ class TestHashCode {
     @Test
     fun testNonNormalized() {
         for (i in 0..<1000) {
-            val hiPos = BigInt.fromRandom(rng.nextInt(500))
+            val hiPos = BigInt.randomWithMaxBitLen(rng.nextInt(500))
            if (hiPos.isZero())
                continue
             val biggerBitLen = hiPos.magnitudeBitLen() + rng.nextInt(1000) + 32

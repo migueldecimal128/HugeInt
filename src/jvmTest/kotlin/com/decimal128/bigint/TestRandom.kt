@@ -30,6 +30,6 @@ class TestRandom {
     val rng = Random.Default
 
     fun randomHi(hiBitLen: Int) =
-        BigInt.fromRandom(rng.nextInt(hiBitLen), rng)
+        BigInt.randomWithMaxBitLen(rng.nextInt(hiBitLen), rng)
 
 }

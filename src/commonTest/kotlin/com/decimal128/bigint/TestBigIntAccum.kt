@@ -252,7 +252,7 @@ class TestBigIntAccum {
 
     fun randomBigInt(hiBitLen: Int): BigInt {
         val n = rng.nextInt(hiBitLen)
-        val v = BigInt.fromRandom(n, rng)
+        val v = BigInt.randomWithMaxBitLen(n, rng)
         return if (rng.nextBoolean()) v.negate() else v
     }
 

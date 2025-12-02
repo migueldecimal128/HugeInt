@@ -19,15 +19,15 @@ class TestGcd {
     }
 
     fun test1(bitLen: Int) {
-        val x = BigInt.fromRandom(bitLen, withRandomSign = true)
-        val y = BigInt.fromRandom(bitLen, withRandomSign = true)
+        val x = BigInt.randomWithMaxBitLen(bitLen, withRandomSign = true)
+        val y = BigInt.randomWithMaxBitLen(bitLen, withRandomSign = true)
 
         testSymmetry(x, y)
         testIdempotence(x)
         testZero(x)
         testSigns(x, y)
 
-        val k = BigInt.fromRandom(Random.nextInt(29))
+        val k = BigInt.randomWithMaxBitLen(Random.nextInt(29))
         val a = x * k
         val b = y * k
 

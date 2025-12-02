@@ -21,7 +21,7 @@ class TestAdd32 {
     }
 
     fun testUnsigned() {
-        val kbi = BigInt.fromRandom(300)
+        val kbi = BigInt.randomWithMaxBitLen(300)
         val jbi = kbi.toBigInteger()
         val w = rng.nextUInt()
         if (verbose)
@@ -36,7 +36,7 @@ class TestAdd32 {
     }
 
     fun testSigned() {
-        val kbi = BigInt.fromRandom(300)
+        val kbi = BigInt.randomWithMaxBitLen(300)
         val jbi = kbi.toBigInteger()
         val n = rng.nextInt()
         if (verbose)
@@ -53,7 +53,7 @@ class TestAdd32 {
     val rng = Random.Default
 
     fun randomHi(hiBitLen: Int): BigInt {
-        val rand = BigInt.fromRandom(rng.nextInt(hiBitLen), rng)
+        val rand = BigInt.randomWithMaxBitLen(rng.nextInt(hiBitLen), rng)
         return if (rng.nextBoolean()) rand.negate() else rand
     }
 
