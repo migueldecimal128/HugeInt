@@ -2295,6 +2295,9 @@ class BigInt private constructor(internal val sign: Sign, internal val magia: In
      */
     fun isNormalized() = magia === Magia.ZERO || magia[magia.size - 1] != 0
 
+    fun normalize(): BigInt =
+        if (isNormalized()) this else BigInt(sign, Magia.newCopyTrimmed(magia))
+
     /**
      * Internal helper for addition or subtraction between two BigInts.
      *

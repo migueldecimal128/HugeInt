@@ -123,6 +123,16 @@ class TestBarrett {
     }
 
     @Test
+    fun testProblem0() {
+        val m = "12345678901234567890".toBigInt()
+        val x = "123456789012345678901234567890".toBigInt()
+        val barrett = Barrett(m)
+        val rKnuth = x % m
+        val rBarrett = barrett.remainder(x)
+        assertEquals(rKnuth, rBarrett)
+    }
+
+    @Test
     fun testProblem1() {
         val m = "15720338158108356290".toBigInt()
         val x = "235477347269641899085489191398656418338".toBigInt()
